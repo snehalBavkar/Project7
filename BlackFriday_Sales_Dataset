@@ -1,0 +1,91 @@
+#importing Packages
+from imblearn.pipeline import make_pipeline
+from sklearn.pipeline import make_pipeline
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.metrics import mean_squared_error
+import pandas as pd
+import numpy as np
+#from sklearn.datasets import BlackFriday sales
+
+#load dataset
+df =pd.read_csv("C:/Users/Home/Documents/Snehal/train.csv")
+print(df)
+
+
+
+#Dealing with Missing Values
+df['Product_Category_2'] = df['Product_Category_2'].fillna(-2.0).astype("float32")
+df['Product_Category_3']=df['Product_Category_3'].fillna(-2.0).astype("float32")
+df.isnull().sum()
+
+gender_dict = {'F':0, 'M':1}
+df['Gender'] = df['Gender'].apply(lambda x: gender_dict[x])
+df.head()
+
+cols = ['Age', 'City_Category','Stay_In_Current_City_Years']
+le = LabelEncoder()
+for col in cols:
+    df[col] = le.fit_transform(df[col])
+df.head()
+
+droplist=['User_ID','Product_ID','Purchase']
+x = df.drop(droplist,axis=1)
+y = df["Purchase"]
+
+def train(model, x,y):
+     #Traning and Testing
+      x_train,x_test,y_train,y_test=train_test_split(x,y,random_state=42,test_size=0.25)
+      model.fit(x_train, y_train)
+#print(y_train)
+#print(y_test)
+
+      y_pred=model.predict(x_test)
+
+      cv_score = cross_val_score(model,x,y,scoring='neg_mean_squared_error',cv=5)
+      cv_score = np.abs(np.mean(cv_score))
+
+      print("Results")
+      print('Mean Squared Error :',np.sqrt(mean_squared_error(y_test,y_pred)))
+      print("CV Score :",np.sqrt(cv_score))
+
+model = make_pipeline(StandardScaler(with_mean=False), LinearRegression())
+train(model, x, y)
+# coef = pd.Series(model.coef_,x.columns).sort_values()
+# coef.plt(kind='barh', title='Model Coefficients')
+
+#feature selection
+from sklearn.ensemble import ExtraTreesRegressor
+import matplotlib.pyplot as plt
+model = ExtraTreesRegressor(n_jobs=-1)
+
+train(model, x, y)
+features = pd.Series(model.feature_importances_,index= x.columns).sort_values(ascending=False)
+features.plt(kind='barh', title='Feature Importance')
+print(model.feature_importances_)
+# feat_imp = pd.Series(model.feature_importances_,index=x.columns)
+# feat_imp.nlargest(6).plot(kind='barh')
+# plt.show()
+'''
+#OUTPUT
+C:\Users\Home\PycharmProjects\DataScience\venv\Scripts\python.exe C:/Users/Home/PycharmProjects/DataScience/BlackFriday_Sales_Dataset.py
+        User_ID Product_ID  ... Product_Category_3 Purchase
+0       1000001  P00069042  ...                NaN     8370
+1       1000001  P00248942  ...               14.0    15200
+2       1000001  P00087842  ...                NaN     1422
+3       1000001  P00085442  ...                NaN     1057
+4       1000002  P00285442  ...                NaN     7969
+...         ...        ...  ...                ...      ...
+550063  1006033  P00372445  ...                NaN      368
+550064  1006035  P00375436  ...                NaN      371
+550065  1006036  P00375436  ...                NaN      137
+550066  1006038  P00375436  ...                NaN      365
+550067  1006039  P00371644  ...                NaN      490
+
+[550068 rows x 12 columns]
+Results
+Mean Squared Error : 4617.99403420172
+CV Score : 4625.252945835688
+
+'''
